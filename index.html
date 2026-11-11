@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Poképoopoo: Battle of the Stinks</title>
+<style>
+:root{--ink:#2b2118;--paper:#fffaf0;--accent:#ffcf3f}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Trebuchet MS","Comic Sans MS",system-ui,sans-serif;background:#4a3520;background-image:radial-gradient(#5a4128 2px,transparent 2px);background-size:22px 22px;color:var(--ink);min-height:100vh}
+#app{max-width:760px;margin:0 auto;padding:10px}
+header{display:flex;justify-content:space-between;align-items:center}
+h1{margin:6px 0;font-size:clamp(22px,5.5vw,36px);color:var(--accent);text-shadow:3px 3px 0 #000;letter-spacing:1px}
+h2{margin:0 0 8px}
+.btn{font:inherit;font-weight:bold;border:3px solid #000;border-radius:12px;padding:10px 18px;background:var(--accent);cursor:pointer;box-shadow:0 4px 0 #000;font-size:18px;color:#000}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #000}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.small{font-size:16px;padding:6px 10px}
+.hidden{display:none!important}
+.panelbox{background:var(--paper);border:4px solid #000;border-radius:16px;padding:16px;box-shadow:0 6px 0 #000;margin-top:8px}
+#title .panelbox{text-align:center}
+.title-mons{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:10px 0}
+.title-mons svg{width:80px;height:80px}
+.roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin:12px 0}
+.mon-card{border:3px solid #000;border-radius:12px;background:#fff;padding:8px;text-align:center;cursor:pointer;position:relative;user-select:none}
+.mon-card:hover{background:#fffbe6}
+.mon-card svg{width:86px;height:86px;overflow:visible}
+.mon-card.picked{background:#fff3b0;outline:4px solid #ff8c00}
+.mon-card .num{position:absolute;top:6px;right:8px;background:#ff8c00;color:#fff;border:2px solid #000;border-radius:50%;width:26px;height:26px;font-weight:bold;line-height:22px}
+.cname{font-weight:bold;margin:2px 0 4px}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;border:2px solid #000;font-size:11px;font-weight:bold;color:#fff;text-shadow:1px 1px 0 #000;white-space:nowrap}
+.stats{font-size:12px;color:#444;margin-top:5px}
+.bio{font-size:11px;font-style:italic;color:#666;margin-top:4px}
+.select-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.chart{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:4px 12px;font-size:14px;margin-top:6px}
+details summary{cursor:pointer;font-weight:bold}
+
+.field{position:relative;height:420px;border:4px solid #000;border-radius:16px;overflow:hidden;background:linear-gradient(#8fd3ff 0%,#d4f0ff 46%,#9bd96b 46%,#6fbf4a 100%)}
+.deco{position:absolute;font-size:34px;opacity:.9;pointer-events:none}
+.slot{position:absolute;width:42%;max-width:200px;display:flex;flex-direction:column;align-items:center}
+.e0{top:8px;right:46%}.e1{top:40px;right:3%}
+.p0{bottom:40px;left:3%}.p1{bottom:8px;left:46%}
+.plate{background:var(--paper);border:3px solid #000;border-radius:10px;padding:4px 6px;width:100%;font-size:12px;box-shadow:0 3px 0 #000;transition:opacity .5s}
+.pname{font-weight:bold;font-size:13px;display:flex;justify-content:space-between;gap:4px;white-space:nowrap;overflow:hidden}
+.plate .badge{font-size:10px;padding:0 6px}
+.hpbar{height:10px;background:#444;border:2px solid #000;border-radius:6px;overflow:hidden;margin-top:3px}
+.hpfill{height:100%;width:100%;background:#3ccf4e;transition:width .5s,background .5s}
+.hptext{font-size:11px;text-align:right}
+.spr{width:100px;height:100px;margin-top:4px;position:relative;z-index:1}
+.spr svg{width:100%;height:100%;overflow:visible;animation:idle 1.8s ease-in-out infinite}
+.shadow{width:80px;height:14px;background:rgba(0,0,0,.25);border-radius:50%;margin-top:-10px}
+.active .plate{background:#fff3b0;outline:3px solid #ff8c00}
+.lunge.pl .spr{animation:lungeP .4s}
+.lunge.en .spr{animation:lungeE .4s}
+.hit .spr{animation:shake .45s}
+.hit .spr svg{filter:brightness(1.7) saturate(.3)}
+.fainted .spr{transition:transform .8s,opacity .8s;transform:translateY(40px) scale(.4) rotate(25deg);opacity:0}
+.fainted .plate{opacity:.4}
+.proj{position:absolute;font-size:38px;transform:translate(-50%,-50%);transition:left .45s ease-in,top .45s ease-in;z-index:5;pointer-events:none}
+.burst{position:absolute;font-size:54px;transform:translate(-50%,-50%);animation:burst .55s forwards;z-index:6;pointer-events:none}
+.dmg{position:absolute;font-weight:900;font-size:24px;color:#fff;text-shadow:2px 2px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;transform:translate(-50%,-50%);animation:rise 1s forwards;z-index:7;pointer-events:none;white-space:nowrap}
+.dmg.heal{color:#7dff8a}.dmg.big{color:#ffd23f;font-size:28px}
+
+.panel{margin-top:10px;background:var(--paper);border:4px solid #000;border-radius:16px;padding:10px;box-shadow:0 6px 0 #000;min-height:190px}
+#log{min-height:62px;border-bottom:2px dashed #aaa;padding-bottom:6px;margin-bottom:8px}
+#log div{opacity:.45;font-size:13px}
+#log div:last-child{opacity:1;font-size:17px;font-weight:bold}
+.who{margin-bottom:6px}
+.moves{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mv,.tg,.back{font:inherit;color:var(--ink);text-align:left;border:3px solid #000;border-left:12px solid var(--c,#999);border-radius:12px;padding:8px;background:#fff;cursor:pointer;box-shadow:0 3px 0 #000}
+.mv:hover,.tg:hover,.back:hover{background:#fff8d6}
+.mv:active,.tg:active{transform:translateY(2px);box-shadow:0 1px 0 #000}
+.mvn{display:block;font-weight:bold;font-size:15px}
+.mvd{display:block;font-size:11px;color:#555}
+.mvdesc{display:block;font-size:12px;margin-top:2px}
+.tg small{display:block;color:#b33;font-weight:bold}
+#end .panelbox{text-align:center}
+.bigemoji{font-size:70px}
+
+@keyframes idle{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes lungeP{50%{transform:translate(28px,-28px)}}
+@keyframes lungeE{50%{transform:translate(-28px,28px)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-10px) rotate(-6deg)}40%{transform:translateX(9px) rotate(5deg)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+@keyframes burst{0%{transform:translate(-50%,-50%) scale(.3);opacity:1}100%{transform:translate(-50%,-50%) scale(1.8);opacity:0}}
+@keyframes rise{0%{opacity:1;margin-top:0}100%{opacity:0;margin-top:-50px}}
+@keyframes buzz{0%,100%{transform:translate(0,0)}25%{transform:translate(7px,-5px)}50%{transform:translate(-4px,4px)}75%{transform:translate(5px,6px)}}
+@keyframes bubble{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-22px);opacity:0}}
+@keyframes wisp{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
+.fly{animation:buzz .6s linear infinite}.fly.f2{animation-duration:.45s}
+.bub{animation:bubble 1.6s ease-out infinite}.bub.b2{animation-delay:.5s}.bub.b3{animation-delay:1s}
+.wisp{animation:wisp 1.4s ease-in-out infinite}.wisp.w2{animation-delay:.7s}
+
+@media(max-width:520px){
+  .mvdesc{display:none}
+  .field{height:380px}
+  .spr{width:82px;height:82px}
+  .pname{font-size:11px}
+  .plate .badge{display:none}
+  .moves{gap:6px}
+  .mvn{font-size:13px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>💩 POKÉPOOPOO 💨</h1>
+    <div>
+      <button class="btn small" id="musicBtn" title="Music on/off">🎵</button>
+      <button class="btn small" id="mute" title="Sound effects on/off">🔊</button>
+    </div>
+  </header>
+
+  <section id="title">
+    <div class="panelbox">
+      <h2>Battle of the Stinks</h2>
+      <div class="title-mons" id="titleMons"></div>
+      <p>Pick two smelly monsters and win a 2-vs-2 battle using the most disgusting moves known to science.</p>
+      <button class="btn" id="play">PLAY 🧻</button>
+    </div>
+  </section>
+
+  <section id="select" class="hidden">
+    <div class="panelbox">
+      <div class="select-bar">
+        <h2>Choose 2 Poképoopoos</h2>
+        <div><span id="pickcount">0/2 picked</span> &nbsp;<button class="btn" id="go" disabled>BATTLE! ⚔️</button></div>
+      </div>
+      <div class="roster" id="roster"></div>
+      <details open>
+        <summary>Type chart (super smelly = double damage)</summary>
+        <div class="chart" id="chart"></div>
+      </details>
+    </div>
+  </section>
+
+  <section id="battle" class="hidden">
+    <div class="field" id="field">
+      <div class="deco" style="top:6px;left:8%">☁️</div>
+      <div class="deco" style="top:30px;left:30%;font-size:26px">☁️</div>
+      <div class="deco" style="bottom:120px;right:6%;font-size:28px">🧻</div>
+      <div class="deco" style="bottom:150px;left:42%;font-size:22px">🌼</div>
+    </div>
+    <div class="panel">
+      <div id="log"></div>
+      <div id="menu"></div>
+    </div>
+  </section>
+
+  <section id="end" class="hidden">
+    <div class="panelbox" id="endBox"></div>
+  </section>
+</div>
+
+<audio id="themeMusic" src="poke-poopoo-theme.mp3" loop preload="auto"></audio>
+<audio id="battleMusic" src="battle-loop.mp3" loop preload="auto"></audio>
+<script>
+// ================= DATA =================
+const TYPES = {
+  toilet: {name:'Toilet',          emoji:'🚽', color:'#3d8fd1'},
+  undies: {name:'Poo-y Underwear', emoji:'🩲', color:'#8b5a2b'},
+  sock:   {name:'Smelly Sock',     emoji:'🧦', color:'#d39a2c'},
+  gnome:  {name:'Cranky Gnome',    emoji:'🍄', color:'#d94040'},
+  burp:   {name:'Burp',            emoji:'🥤', color:'#3fae4a'},
+  fart:   {name:'Fart',            emoji:'💨', color:'#9b6bc9'},
+};
+// Each type is super smelly (2x) against the next one in the ring
+const STRONG = {toilet:'undies', undies:'sock', sock:'gnome', gnome:'burp', burp:'fart', fart:'toilet'};
+const WHY = {
+  toilet:'flushes them away',
+  undies:'smothers it completely',
+  sock:'gets stuffed in its mouth',
+  gnome:'tells it off for bad manners',
+  burp:'drowns it out',
+  fart:'clears the whole bathroom',
+};
+function eff(moveType, defType){
+  if (STRONG[moveType] === defType) return 2;
+  if (STRONG[defType] === moveType || moveType === defType) return 0.5;
+  return 1;
+}
+
+const MOVES = {
+  fartAttack:    {name:'Fart Attack',       type:'fart',  power:26, target:'one',  fx:'💨', desc:'A classic. Point. Aim. Release.'},
+  sbd:           {name:'Silent But Deadly', type:'fart',  power:14, target:'one',  fx:'🤫', effect:'stink', chance:100, desc:'Nobody heard it. Everybody smells it. Makes target Stinky.'},
+  beanBlast:     {name:'Bean Blast',        type:'fart',  power:16, target:'both', fx:'🫘', desc:'Three cans of baked beans. Hits both foes.'},
+  pullMyFinger:  {name:'Pull My Finger',    type:'fart',  power:20, target:'one',  fx:'👉', effect:'gross', chance:35, desc:'They fell for it. May gross out the target.'},
+  megaBurp:      {name:'Mega Burp',         type:'burp',  power:26, target:'one',  fx:'🗯️', desc:'Rattles windows three streets away.'},
+  sodaSpray:     {name:'Soda Spray',        type:'burp',  power:15, target:'both', fx:'🥤', desc:'Shake the can. Open the can. Hits both foes.'},
+  hiccupHeadbutt:{name:'Hiccup Headbutt',   type:'burp',  power:20, target:'one',  fx:'💫', effect:'gross', chance:30, desc:'*hic* BONK *hic*. May gross out the target.'},
+  fizzyRecharge: {name:'Fizzy Recharge',    type:'burp',  power:0,  target:'self', fx:'🫧', effect:'heal', desc:'Chugs a lemonade. Heals 35% HP.'},
+  swirlie:       {name:'Toilet Swirlie',    type:'toilet',power:26, target:'one',  fx:'🌀', desc:'Head in. Flush. Classic.'},
+  plungerPunch:  {name:'Plunger Punch',     type:'toilet',power:20, target:'one',  fx:'🪠', effect:'gross', chance:30, desc:'SHLOOOP! May gross out the target.'},
+  bigFlush:      {name:'The Big Flush',     type:'toilet',power:15, target:'both', fx:'🌊', desc:'Everything must go. Hits both foes.'},
+  lidSlam:       {name:'Lid Slam',          type:'toilet',power:32, target:'one',  fx:'💥', acc:75, desc:'Huge damage, but often misses. Like Dad at 3am.'},
+  pooBomb:       {name:'Poo Bomb',          type:'undies',power:28, target:'one',  fx:'💩', acc:85, desc:'Exactly what it sounds like. Might miss.'},
+  wedgieWallop:  {name:'Wedgie Wallop',     type:'undies',power:20, target:'one',  fx:'🩲', effect:'gross', chance:40, desc:'Up, up and away. May gross out the target.'},
+  skidSmear:     {name:'Skid Mark Smear',   type:'undies',power:12, target:'one',  fx:'🟫', effect:'stink', chance:100, desc:'Leaves a mark. Makes target Stinky.'},
+  elasticSnap:   {name:'Elastic Snap',      type:'undies',power:15, target:'both', fx:'⚡', desc:'THWACK! Hits both foes.'},
+  hatPoke:       {name:'Pointy Hat Poke',   type:'gnome', power:26, target:'one',  fx:'🔺', desc:'The hat is pointy for a reason.'},
+  grumpyGrumble: {name:'Grumpy Grumble',    type:'gnome', power:14, target:'both', fx:'😠', effect:'gross', chance:25, desc:'Complains about kids these days. Hits both foes.'},
+  beardWhip:     {name:'Beard Whip',        type:'gnome', power:22, target:'one',  fx:'🧔', desc:'Old biscuit crumbs fly everywhere.'},
+  getOffMyLawn:  {name:'Get Off My Lawn!',  type:'gnome', power:0,  target:'self', fx:'💪', effect:'buff', desc:'Gets REALLY cranky. Attack up 50%.'},
+  toeJam:        {name:'Toe Jam Toss',      type:'sock',  power:26, target:'one',  fx:'🦶', desc:'Freshly harvested.'},
+  sockPuppetSlap:{name:'Sock Puppet Slap',  type:'sock',  power:20, target:'one',  fx:'🧦', effect:'gross', chance:30, desc:'The puppet does a voice. It is annoying.'},
+  footFumes:     {name:'Cheesy Foot Fumes', type:'sock',  power:14, target:'both', fx:'🧀', effect:'stink', chance:40, desc:'Hits both foes. May make them Stinky.'},
+  spinCycle:     {name:'Spin Cycle',        type:'sock',  power:0,  target:'self', fx:'🧺', effect:'heal', desc:'A quick wash. Heals 35% HP.'},
+};
+
+const ROSTER = [
+  {name:'Stinky Steve',     type:'fart',  color:'#b48ad9', hp:105, atk:22, def:11, spd:15, moves:['fartAttack','sbd','beanBlast','pooBomb'],          bio:"Hasn't showered since Tuesday. Which Tuesday? Nobody knows."},
+  {name:'Burping Billy',    type:'burp',  color:'#7ccf6a', hp:110, atk:21, def:12, spd:12, moves:['megaBurp','sodaSpray','hiccupHeadbutt','fizzyRecharge'], bio:'Can burp the whole alphabet. Twice.'},
+  {name:'Flushy McFlush',   type:'toilet',color:'#4fa3d9', hp:120, atk:20, def:14, spd:8,  moves:['swirlie','plungerPunch','bigFlush','lidSlam'],    bio:'Has seen things. Terrible things.'},
+  {name:'Skid Mark Sally',  type:'undies',color:'#f2e6c9', hp:100, atk:23, def:10, spd:16, moves:['pooBomb','wedgieWallop','skidSmear','elasticSnap'], bio:'Last washed in 2019. Proud of it.'},
+  {name:'Grumbles',         type:'gnome', color:'#d94040', hp:95,  atk:24, def:11, spd:13, moves:['hatPoke','grumpyGrumble','beardWhip','getOffMyLawn'], bio:'Hates fun, noise, children and Tuesdays.'},
+  {name:'Sweaty Sockrates', type:'sock',  color:'#f0d98a', hp:105, atk:21, def:12, spd:14, moves:['toeJam','sockPuppetSlap','footFumes','spinCycle'],  bio:'A philosopher. Mostly thinks about cheese.'},
+  {name:'Captain Clog',     type:'toilet',color:'#8b6b3a', hp:115, atk:23, def:12, spd:9,  moves:['lidSlam','pooBomb','bigFlush','plungerPunch'],    bio:'Do NOT ask what is blocking him.'},
+  {name:"Nana's Knickers",  type:'undies',color:'#f7b6cf', hp:100, atk:20, def:12, spd:17, moves:['wedgieWallop','elasticSnap','skidSmear','getOffMyLawn'], bio:'Enormous. Frilly. Surprisingly fast.'},
+  {name:'Gnorman',          type:'gnome', color:'#3a6fd9', hp:100, atk:22, def:12, spd:11, moves:['hatPoke','beardWhip','grumpyGrumble','pullMyFinger'], bio:"The 'G' is silent. So is his last fart."},
+  {name:'Fizzy Fiona',      type:'burp',  color:'#f5a742', hp:100, atk:22, def:11, spd:18, moves:['megaBurp','hiccupHeadbutt','sodaSpray','beanBlast'], bio:'Runs entirely on orange soda.'},
+];
+
+// ================= SPRITES =================
+function eyes(x1, x2, y, r, mood, lid){
+  let s = '';
+  for (const cx of [x1, x2]){
+    s += `<circle cx="${cx}" cy="${y}" r="${r}" fill="#fff" stroke="#222" stroke-width="2"/>`;
+    s += `<circle cx="${cx+1}" cy="${y+1}" r="${r*0.45}" fill="#222"/>`;
+    if (mood === 'smug') s += `<path d="M${cx-r} ${y} A${r} ${r} 0 0 1 ${cx+r} ${y} Z" fill="${lid}" stroke="#222" stroke-width="2"/>`;
+  }
+  if (mood === 'angry'){
+    s += `<path d="M${x1-r-1} ${y-r-5} L${x1+r} ${y-r+1}" stroke="#222" stroke-width="3.5" stroke-linecap="round"/>`;
+    s += `<path d="M${x2+r+1} ${y-r-5} L${x2-r} ${y-r+1}" stroke="#222" stroke-width="3.5" stroke-linecap="round"/>`;
+  }
+  return s;
+}
+function sprite(m){
+  const c = m.color;
+  const S = inner => `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+  switch (m.type){
+    case 'toilet': return S(`
+      <rect x="80" y="16" width="14" height="6" rx="3" fill="#bbb" stroke="#222" stroke-width="2"/>
+      <rect x="30" y="6" width="56" height="42" rx="8" fill="#f7fbff" stroke="#222" stroke-width="3"/>
+      ${eyes(46,70,26,7,'angry')}
+      <path d="M20 50 H100 Q100 84 74 92 L78 114 H42 L46 92 Q20 84 20 50 Z" fill="#f7fbff" stroke="#222" stroke-width="3"/>
+      <ellipse cx="60" cy="54" rx="36" ry="9" fill="${c}" stroke="#222" stroke-width="3"/>
+      <path d="M42 68 Q60 86 78 68 Z" fill="#fff" stroke="#222" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M52 68 V74 M60 68 V76 M68 68 V74" stroke="#222" stroke-width="2"/>`);
+    case 'undies': return S(`
+      <path d="M12 32 H108 L102 70 Q82 74 70 100 H50 Q38 74 18 70 Z" fill="${c}" stroke="#222" stroke-width="3"/>
+      <rect x="10" y="24" width="100" height="13" rx="5" fill="#fff" stroke="#222" stroke-width="3"/>
+      <path d="M52 78 Q60 70 68 79 Q66 94 60 96 Q53 94 52 78 Z" fill="#7a4a1c" opacity=".9"/>
+      <circle cx="86" cy="60" r="5" fill="#7a4a1c" opacity=".7"/>
+      ${eyes(44,76,51,8,'smug',c)}
+      <path d="M48 65 q6 -5 12 0 q6 5 12 0" stroke="#222" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <g class="fly"><ellipse cx="16" cy="9" rx="4" ry="2.5" fill="#d8ecff"/><circle cx="18" cy="13" r="3.2" fill="#222"/></g>
+      <g class="fly f2"><ellipse cx="103" cy="6" rx="4" ry="2.5" fill="#d8ecff"/><circle cx="100" cy="10" r="3.2" fill="#222"/></g>`);
+    case 'gnome': return S(`
+      <circle cx="60" cy="62" r="22" fill="#f6c9a0" stroke="#222" stroke-width="3"/>
+      <path d="M36 64 Q38 112 60 116 Q82 112 84 64 Q74 80 60 78 Q46 80 36 64 Z" fill="#fff" stroke="#222" stroke-width="3"/>
+      <path d="M60 2 L90 50 H30 Z" fill="${c}" stroke="#222" stroke-width="3" stroke-linejoin="round"/>
+      ${eyes(51,69,57,5,'angry')}
+      <circle cx="60" cy="68" r="6" fill="#f09a8a" stroke="#222" stroke-width="2"/>
+      <path d="M51 88 Q60 81 69 88" stroke="#222" stroke-width="3" fill="none" stroke-linecap="round"/>`);
+    case 'burp': return S(`
+      <path d="M18 102 Q8 50 40 30 Q60 18 80 30 Q112 50 102 102 Z" fill="${c}" stroke="#222" stroke-width="3"/>
+      ${eyes(46,74,52,8,'')}
+      <ellipse cx="60" cy="80" rx="19" ry="13" fill="#5a1a1a" stroke="#222" stroke-width="3"/>
+      <ellipse cx="60" cy="87" rx="9" ry="4" fill="#e66"/>
+      <circle class="bub" cx="90" cy="22" r="5" fill="none" stroke="#222" stroke-width="2"/>
+      <circle class="bub b2" cx="98" cy="30" r="3.5" fill="none" stroke="#222" stroke-width="2"/>
+      <circle class="bub b3" cx="84" cy="14" r="3" fill="none" stroke="#222" stroke-width="2"/>`);
+    case 'fart': {
+      const blobs = [[40,62,24],[70,50,28],[86,76,20],[52,84,20]];
+      return S(`
+      <g fill="${c}" stroke="#222" stroke-width="6">${blobs.map(b=>`<circle cx="${b[0]}" cy="${b[1]}" r="${b[2]}"/>`).join('')}</g>
+      <g fill="${c}">${blobs.map(b=>`<circle cx="${b[0]}" cy="${b[1]}" r="${b[2]}"/>`).join('')}</g>
+      ${eyes(52,76,58,7,'smug',c)}
+      <path d="M52 76 Q65 86 78 73" stroke="#222" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path class="wisp" d="M14 44 q-6 -10 2 -18 q8 -8 0 -16" stroke="#6cc35a" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <path class="wisp w2" d="M106 40 q6 -10 -2 -18 q-8 -8 0 -16" stroke="#6cc35a" stroke-width="3.5" fill="none" stroke-linecap="round"/>`);
+    }
+    case 'sock': return S(`
+      <path d="M40 6 H78 V70 Q78 80 88 84 L102 90 Q114 96 108 108 Q102 117 86 112 L50 100 Q38 96 40 82 Z" fill="${c}" stroke="#222" stroke-width="3" stroke-linejoin="round"/>
+      <rect x="41.5" y="11" width="35" height="6" fill="#c33"/>
+      <rect x="41.5" y="21" width="35" height="6" fill="#c33"/>
+      <circle cx="99" cy="103" r="6" fill="#f6c9a0" stroke="#222" stroke-width="2"/>
+      ${eyes(51,67,46,6,'')}
+      <path d="M50 62 Q59 69 68 62" stroke="#222" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M30 44 q-5 7 0 9 q5 -2 0 -9 Z" fill="#7fc8ff" stroke="#222" stroke-width="1.5"/>
+      <path class="wisp" d="M88 40 q6 -8 0 -14 q-6 -6 0 -14" stroke="#6cc35a" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path class="wisp w2" d="M98 52 q6 -8 0 -14 q-6 -6 0 -14" stroke="#6cc35a" stroke-width="3" fill="none" stroke-linecap="round"/>`);
+  }
+}
+
+// ================= SOUND (Web Audio, no files needed) =================
+let muted = false, actx = null;
+function ctx(){
+  if (!actx){ const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null; actx = new AC(); }
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function tone(wave, base, dur, lfoHz, lfoAmt, vol, endFreq){
+  if (muted) return; const c = ctx(); if (!c) return;
+  const t = c.currentTime;
+  const o = c.createOscillator(); o.type = wave; o.frequency.setValueAtTime(base, t);
+  if (endFreq) o.frequency.exponentialRampToValueAtTime(endFreq, t + dur);
+  const l = c.createOscillator(); l.frequency.value = lfoHz;
+  const lg = c.createGain(); lg.gain.value = lfoAmt; l.connect(lg).connect(o.frequency);
+  const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 700;
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.03);
+  g.gain.setValueAtTime(vol, t + dur * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(f).connect(g).connect(c.destination);
+  o.start(t); l.start(t); o.stop(t + dur + 0.05); l.stop(t + dur + 0.05);
+}
+function noise(dur, f1, f2, q, vol){
+  if (muted) return; const c = ctx(); if (!c) return;
+  const t = c.currentTime;
+  const buf = c.createBuffer(1, Math.floor(c.sampleRate * dur), c.sampleRate);
+  const d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  const src = c.createBufferSource(); src.buffer = buf;
+  const f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = q;
+  f.frequency.setValueAtTime(f1, t); f.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  const g = c.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(f).connect(g).connect(c.destination); src.start(t);
+}
+const fartSnd = (dur, base) => tone('sawtooth', base, dur, 14 + Math.random() * 12, base * 0.35, 0.35, base * 0.6);
+const SOUNDS = {
+  fart:   () => fartSnd(0.7, 75),
+  undies: () => fartSnd(0.35, 130),
+  burp:   () => tone('square', 120, 0.6, 28, 40, 0.22, 55),
+  toilet: () => noise(0.9, 1800, 250, 1.2, 0.4),
+  gnome:  () => tone('sawtooth', 90, 0.6, 7, 25, 0.25, 70),
+  sock:   () => noise(0.35, 400, 2500, 2, 0.35),
+};
+const hitSnd = () => noise(0.15, 220, 90, 1, 0.6);
+const healSnd = () => tone('sine', 500, 0.4, 6, 30, 0.2, 900);
+
+// ================= HELPERS =================
+const $ = s => document.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const rand = arr => arr[Math.floor(Math.random() * arr.length)];
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const badge = t => `<span class="badge" style="background:${TYPES[t].color}">${TYPES[t].emoji} ${TYPES[t].name}</span>`;
+function show(id){ ['title','select','battle','end'].forEach(s => $('#' + s).classList.toggle('hidden', s !== id)); window.scrollTo(0,0); setMusic(id === 'battle' ? 'battle' : 'theme'); }
+
+// ================= MUSIC =================
+// Theme song (with singing) plays on menus; the instrumental loop plays during battles.
+let musicOn = true, musicStarted = false, currentTrack = null;
+const TRACKS = {theme: $('#themeMusic'), battle: $('#battleMusic')};
+TRACKS.theme.volume = 0.8; TRACKS.battle.volume = 0.45;
+function setMusic(name){
+  if (!musicStarted) return;               // browsers only allow music after the first click
+  if (name !== currentTrack){
+    Object.entries(TRACKS).forEach(([k, a]) => { if (k !== name) a.pause(); });
+    if (name === 'theme') TRACKS.theme.currentTime = 0;
+    currentTrack = name;
+  }
+  const a = TRACKS[name];
+  if (musicOn) a.play().catch(() => {}); else a.pause();
+}
+
+let picks = [], state = null;
+const alive = team => team.filter(m => !m.fainted);
+const foesOf = m => m.side === 'player' ? state.enemy : state.player;
+
+// ================= TITLE & SELECT =================
+$('#titleMons').innerHTML = [0,1,4,2].map(i => sprite(ROSTER[i])).join('');
+$('#chart').innerHTML = Object.keys(STRONG).map(t =>
+  `<div>${TYPES[t].emoji} <b>${TYPES[t].name}</b> beats ${TYPES[STRONG[t]].emoji} ${TYPES[STRONG[t]].name} <i>(${WHY[t]})</i></div>`).join('');
+
+function renderSelect(){
+  const r = $('#roster'); r.innerHTML = '';
+  ROSTER.forEach((m, i) => {
+    const d = document.createElement('div');
+    const k = picks.indexOf(i);
+    d.className = 'mon-card' + (k >= 0 ? ' picked' : '');
+    d.innerHTML = `${k >= 0 ? `<div class="num">${k + 1}</div>` : ''}${sprite(m)}
+      <div class="cname">${m.name}</div>${badge(m.type)}
+      <div class="stats">❤️${m.hp} 👊${m.atk} 🛡️${m.def} ⚡${m.spd}</div>
+      <div class="bio">${m.bio}</div>`;
+    d.onclick = () => {
+      const j = picks.indexOf(i);
+      if (j >= 0) picks.splice(j, 1);
+      else { if (picks.length >= 2) picks.shift(); picks.push(i); }
+      renderSelect();
+    };
+    r.append(d);
+  });
+  $('#go').disabled = picks.length !== 2;
+  $('#pickcount').textContent = `${picks.length}/2 picked`;
+}
+
+$('#play').onclick = () => { ctx(); musicStarted = true; renderSelect(); show('select'); };
+$('#go').onclick = startBattle;
+$('#mute').onclick = () => { muted = !muted; $('#mute').textContent = muted ? '🔇' : '🔊'; };
+$('#musicBtn').onclick = () => {
+  musicOn = !musicOn; musicStarted = true; $('#musicBtn').style.opacity = musicOn ? 1 : 0.4;
+  setMusic(currentTrack || ($('#battle').classList.contains('hidden') ? 'theme' : 'battle'));
+};
+
+// ================= BATTLE =================
+function make(base, side, idx){
+  return {...base, moves: base.moves.map(k => MOVES[k]), maxHp: base.hp, stink: 0, gross: false, buff: false, fainted: false, side, idx};
+}
+
+function startBattle(){
+  const pool = shuffle(ROSTER.map((_, i) => i).filter(i => !picks.includes(i)));
+  state = {
+    player: picks.map((i, k) => make(ROSTER[i], 'player', k)),
+    enemy:  pool.slice(0, 2).map((i, k) => make(ROSTER[i], 'enemy', k)),
+  };
+  renderField();
+  $('#log').innerHTML = ''; $('#menu').innerHTML = '';
+  show('battle');
+  runBattle();
+}
+
+function renderField(){
+  const f = $('#field');
+  f.querySelectorAll('.slot,.proj,.burst,.dmg').forEach(n => n.remove());
+  [...state.enemy, ...state.player].forEach(m => {
+    const s = document.createElement('div');
+    const p = m.side === 'player';
+    s.className = `slot ${p ? 'pl p' : 'en e'}${m.idx}`;
+    s.innerHTML = `<div class="plate">
+        <div class="pname"><span>${m.name}</span><span class="st"></span></div>
+        ${badge(m.type)}
+        <div class="hpbar"><div class="hpfill"></div></div>
+        <div class="hptext"></div></div>
+      <div class="spr">${sprite(m)}</div><div class="shadow"></div>`;
+    m.el = s; f.append(s); updateBar(m);
+  });
+}
+
+function updateBar(m){
+  const p = m.hp / m.maxHp;
+  const fill = m.el.querySelector('.hpfill');
+  fill.style.width = (p * 100) + '%';
+  fill.style.background = p > 0.5 ? '#3ccf4e' : p > 0.2 ? '#f2c230' : '#e8452c';
+  m.el.querySelector('.hptext').textContent = `${m.hp}/${m.maxHp} HP`;
+  m.el.querySelector('.st').textContent = (m.stink ? '🤢' : '') + (m.gross ? '😵' : '') + (m.buff ? '💪' : '');
+}
+
+function say(msg, ms = 1100){
+  const l = $('#log');
+  const d = document.createElement('div'); d.textContent = msg; l.append(d);
+  while (l.children.length > 3) l.firstChild.remove();
+  return sleep(ms);
+}
+
+function center(m){
+  const f = $('#field').getBoundingClientRect();
+  const r = m.el.querySelector('.spr').getBoundingClientRect();
+  return {x: r.left - f.left + r.width / 2, y: r.top - f.top + r.height / 2};
+}
+function floater(m, text, cls){
+  const c = center(m);
+  const d = document.createElement('div'); d.className = 'dmg ' + (cls || ''); d.textContent = text;
+  d.style.left = c.x + 'px'; d.style.top = (c.y - 20) + 'px';
+  $('#field').append(d); setTimeout(() => d.remove(), 1000);
+}
+function burst(m, emoji){
+  const c = center(m);
+  const d = document.createElement('div'); d.className = 'burst'; d.textContent = emoji;
+  d.style.left = c.x + 'px'; d.style.top = c.y + 'px';
+  $('#field').append(d); setTimeout(() => d.remove(), 560);
+}
+async function projectile(from, to, emoji){
+  const a = center(from), b = center(to);
+  const p = document.createElement('div'); p.className = 'proj'; p.textContent = emoji;
+  p.style.left = a.x + 'px'; p.style.top = a.y + 'px';
+  $('#field').append(p);
+  void p.offsetWidth;
+  p.style.left = b.x + 'px'; p.style.top = b.y + 'px';
+  await sleep(470);
+  p.remove(); burst(to, emoji);
+}
+function anim(m, cls, ms){
+  m.el.classList.remove(cls); void m.el.offsetWidth; m.el.classList.add(cls);
+  setTimeout(() => m.el.classList.remove(cls), ms);
+}
+function effLabel(mt, dt){
+  const e = eff(mt, dt);
+  return e > 1 ? '💥 Super smelly!' : e < 1 ? '😐 Not very smelly' : '';
+}
+
+// Player picks a move (and a target if needed)
+function pickMove(mon){
+  state.player.forEach(p => p.el.classList.toggle('active', p === mon));
+  return new Promise(resolve => {
+    const menu = $('#menu');
+    const renderMoves = () => {
+      menu.innerHTML = `<div class="who">What will <b>${mon.name}</b> do?</div><div class="moves">${
+        mon.moves.map((mv, i) => `<button class="mv" data-i="${i}" style="--c:${TYPES[mv.type].color}">
+          <span class="mvn">${mv.fx} ${mv.name}</span>
+          <span class="mvd">${TYPES[mv.type].name} · ${mv.power ? 'Power ' + mv.power : 'Support'}${mv.target === 'both' ? ' · hits both' : ''}${mv.acc ? ' · ' + mv.acc + '% aim' : ''}</span>
+          <span class="mvdesc">${mv.desc}</span></button>`).join('')}</div>`;
+      menu.querySelectorAll('.mv').forEach(b => b.onclick = () => {
+        const mv = mon.moves[b.dataset.i];
+        if (mv.target !== 'one') return resolve({user: mon, move: mv, target: null});
+        const foes = alive(state.enemy);
+        if (foes.length === 1) return resolve({user: mon, move: mv, target: foes[0]});
+        menu.innerHTML = `<div class="who">Use <b>${mv.name}</b> on who?</div><div class="moves">${
+          foes.map(f => `<button class="tg" data-i="${f.idx}" style="--c:${TYPES[f.type].color}">🎯 ${f.name}<small>${effLabel(mv.type, f.type)}</small></button>`).join('')
+        }<button class="back">↩ Back</button></div>`;
+        menu.querySelectorAll('.tg').forEach(t => t.onclick = () => resolve({user: mon, move: mv, target: state.enemy[t.dataset.i]}));
+        menu.querySelector('.back').onclick = renderMoves;
+      });
+    };
+    renderMoves();
+  });
+}
+
+// Enemy brain: likes super smelly moves, heals when low
+function aiPick(m){
+  const foes = alive(state.player);
+  const scored = m.moves.map(mv => {
+    let s;
+    if (mv.target === 'self'){
+      s = mv.effect === 'heal' ? (m.hp / m.maxHp < 0.5 ? 3 : 0.2) : (m.buff ? 0.1 : 1.2);
+    } else {
+      const best = Math.max(...foes.map(f => eff(mv.type, f.type)));
+      s = (mv.power / 20) * best * (mv.target === 'both' && foes.length > 1 ? 1.4 : 1) * ((mv.acc || 100) / 100);
+      if (mv.effect) s += 0.3;
+    }
+    return {mv, w: Math.max(0.05, s) ** 2};
+  });
+  let r = Math.random() * scored.reduce((a, b) => a + b.w, 0), mv = scored[0].mv;
+  for (const s of scored){ r -= s.w; if (r <= 0){ mv = s.mv; break; } }
+  let target = null;
+  if (mv.target === 'one'){
+    const sorted = [...foes].sort((a, b) => eff(mv.type, b.type) - eff(mv.type, a.type) || a.hp - b.hp);
+    target = Math.random() < 0.7 ? sorted[0] : rand(foes);
+  }
+  return {user: m, move: mv, target};
+}
+
+async function act({user, move, target}){
+  if (user.gross){
+    user.gross = false; updateBar(user);
+    await say(`${user.name} is too grossed out to move! 🤢`);
+    return;
+  }
+  await say(`${user.name} used ${move.name}!`, 650);
+  (SOUNDS[move.type] || SOUNDS.fart)();
+  anim(user, 'lunge', 400);
+
+  if (move.target === 'self'){
+    burst(user, move.fx);
+    if (move.effect === 'heal'){
+      const h = Math.min(user.maxHp - user.hp, Math.round(user.maxHp * 0.35));
+      user.hp += h; updateBar(user); healSnd(); floater(user, '+' + h, 'heal');
+      await say(h ? `${user.name} feels fresher! ✨` : `${user.name} was already fresh as a daisy. Wasted!`);
+    } else if (user.buff){
+      await say(`${user.name} can't get any crankier than this!`);
+    } else {
+      user.buff = true; updateBar(user);
+      await say(`${user.name} is REALLY cranky now! Attack went up! 💪`);
+    }
+    return;
+  }
+
+  const foes = alive(foesOf(user));
+  let targets = move.target === 'both' ? foes : [target && !target.fainted ? target : rand(foes)];
+  targets = targets.filter(Boolean);
+
+  for (const t of targets){
+    await projectile(user, t, move.fx);
+    if (Math.random() * 100 > (move.acc || 100)){
+      await say(`${user.name} missed ${t.name}! Awkward... 😬`);
+      continue;
+    }
+    const e = eff(move.type, t.type);
+    const crit = Math.random() < 1 / 16;
+    const dmg = Math.max(1, Math.round(move.power * (user.atk / t.def) * 0.5 * e
+      * (0.85 + Math.random() * 0.15) * (crit ? 1.5 : 1) * (user.buff ? 1.5 : 1)));
+    t.hp = Math.max(0, t.hp - dmg);
+    hitSnd(); anim(t, 'hit', 450); updateBar(t);
+    floater(t, '-' + dmg, e > 1 || crit ? 'big' : '');
+    await sleep(450);
+    if (crit) await say('A CRITICAL STINK! 🎯', 800);
+    if (e > 1) await say(`It's SUPER SMELLY against ${t.name}! 💥`, 900);
+    else if (e < 1) await say(`It's not very smelly against ${t.name}...`, 900);
+
+    if (t.hp <= 0){
+      t.fainted = true; t.stink = 0; t.gross = false; updateBar(t);
+      t.el.classList.add('fainted');
+      await say(`${t.name} fainted from the stench! 💫`, 1300);
+      continue;
+    }
+    if (move.effect === 'stink' && Math.random() * 100 < move.chance){
+      const already = t.stink > 0; t.stink = 3; updateBar(t);
+      await say(already ? `${t.name} got even STINKIER! 🤢` : `${t.name} is now STINKY! 🤢`);
+    }
+    if (move.effect === 'gross' && Math.random() * 100 < move.chance && !t.gross){
+      t.gross = true; updateBar(t);
+      await say(`${t.name} is totally grossed out! 😵`);
+    }
+  }
+}
+
+async function endOfTurn(){
+  for (const m of [...state.player, ...state.enemy]){
+    if (m.fainted || !m.stink) continue;
+    const d = Math.ceil(m.maxHp * 0.08);
+    m.hp = Math.max(0, m.hp - d); m.stink--;
+    anim(m, 'hit', 450); floater(m, '-' + d); updateBar(m);
+    await say(`${m.name} is choking on their own stink! 🤢`, 900);
+    if (m.hp <= 0){
+      m.fainted = true; m.stink = 0; updateBar(m); m.el.classList.add('fainted');
+      await say(`${m.name} fainted from the stench! 💫`, 1300);
+    } else if (!m.stink){
+      await say(`${m.name} doesn't smell (as) bad anymore.`, 800);
+    }
+  }
+}
+
+function result(){
+  const pa = alive(state.player).length, ea = alive(state.enemy).length;
+  if (!pa && !ea) return 'draw';
+  if (!ea) return 'win';
+  if (!pa) return 'lose';
+  return null;
+}
+
+async function runBattle(){
+  const [e0, e1] = state.enemy, [p0, p1] = state.player;
+  await say(`Uh oh! ${e0.name} and ${e1.name} want to battle!`, 1500);
+  await say(`Go, ${p0.name} and ${p1.name}! 📣`, 1200);
+  while (!result()){
+    const acts = [];
+    for (const m of alive(state.player)) acts.push(await pickMove(m));
+    state.player.forEach(p => p.el.classList.remove('active'));
+    $('#menu').innerHTML = '<div class="who">💨 💨 💨</div>';
+    for (const m of alive(state.enemy)) acts.push(aiPick(m));
+    acts.sort((a, b) => (b.user.spd - a.user.spd) || (Math.random() - 0.5));
+    for (const a of acts){
+      if (a.user.fainted) continue;
+      await act(a);
+      if (result()) break;
+    }
+    if (!result()) await endOfTurn();
+  }
+  await sleep(700);
+  showEnd(result());
+}
+
+function showEnd(r){
+  const msgs = {
+    win:  ['🏆', 'YOU WIN!', "The air is not clear... but you are the champion of stink."],
+    lose: ['💨', 'YOU LOST!', "You've been out-stunk. Go have a shower and try again."],
+    draw: ['🤢', "IT'S A DRAW!", 'Everyone fainted. The smell is the real winner here.'],
+  };
+  const [emo, title, text] = msgs[r];
+  $('#endBox').innerHTML = `<div class="bigemoji">${emo}</div><h2>${title}</h2><p>${text}</p>
+    <button class="btn" id="again">Battle again with the same team 🔁</button>
+    <p><button class="btn small" id="newteam">Pick a new team</button></p>`;
+  $('#again').onclick = startBattle;
+  $('#newteam').onclick = () => { renderSelect(); show('select'); };
+  if (r === 'win') tone('square', 400, 0.5, 8, 60, 0.15, 800); else fartSnd(1.2, 60);
+  show('end');
+}
+</script>
+</body>
+</html>
